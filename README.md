@@ -62,3 +62,33 @@ Ouvre http://localhost:5173
 
 Le reste (planning, candidatures, giveaway, config CS2, stats de communauté) tourne
 directement avec la base JSON fournie, sans clé externe.
+
+## Déploiement
+
+Le frontend (statique) va sur **Netlify**, le backend (serveur Node avec état) va sur
+**Render** ou **Railway** — Netlify ne peut pas faire tourner un serveur Express avec sessions.
+
+### Backend → Render
+Le fichier `render.yaml` à la racine du repo permet un déploiement en un clic ("Blueprint").
+Renseigne les variables d'environnement marquées `sync: false` dans le dashboard Render
+après le premier déploiement (mêmes valeurs que `.env.example`).
+
+### Backend → Railway (alternative)
+Un `backend/railway.json` est fourni. Dans Railway : New Project → Deploy from GitHub repo →
+Settings → Root Directory = `backend`. Ajoute les mêmes variables que `.env.example` dans
+l'onglet Variables (pas besoin de `PORT`, Railway l'injecte automatiquement). Génère un domaine
+public dans Settings → Networking.
+
+⚠️ Railway (comme Render en plan gratuit) a un système de fichiers éphémère : `backend/data/db.json`
+est réinitialisé à chaque redéploiement. Pour garder les données en prod, ajoute un volume monté
+sur `backend/data`, ou migre lowdb vers une vraie base (Postgres/Railway DB).
+
+### Frontend → Netlify
+Le fichier `netlify.toml` à la racine configure déjà :
+- `base = frontend`, `command = npm run build`, `publish = frontend/dist`
+- une redirection SPA pour que `/planning`, `/site`, `/profil` fonctionnent en rechargement direct
+
+Il ne reste qu'à :
+1. Connecter le repo GitHub dans Netlify ("Import from Git")
+2. Ajouter la variable d'environnement `VITE_API_URL` = URL de ton backend Render (ex: `https://ton-backend.onrender.com`)
+3. Mettre à jour `FRONTEND_URL`, `DISCORD_REDIRECT_URI`, `TWITCH_REDIRECT_URI` côté backend avec les URLs finales, et déclarer ces mêmes redirect URIs dans les consoles développeur Discord/Twitch.
